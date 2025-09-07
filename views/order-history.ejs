@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Order History</title>
+  <link rel="stylesheet" href="/css/order-history.css" />
+</head>
+<body>
+  <div class="wrapper">
+    <aside class="sidebar">
+      <h2><a href="/dashboard" class="brand-link">PharmaSys</a></h2>
+      <nav class="menu">
+        <a href="/make-bill">Make Bill</a>
+        <a href="/billing-history">Billing History</a>
+        <a href="/place-order">Place Order</a>
+        <a href="/accept-order">Accept Order</a>
+        <a href="/order-history">Order History</a>
+        <a href="/view-transactions">View Transactions</a>
+        <a href="/manage-medicine">Manage Medicines</a>
+        <a href="/profile">Profile</a>
+        <a href="/logout" class="logout">Logout</a>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <h1 style="text-align: center; margin-bottom: 30px;">Order History</h1>
+
+      <%
+        const groupedOrders = {};
+        orders.forEach(order => {
+          if (['Accepted', 'Cancelled', 'Completed'].includes(order.status)) {
+            const dateKey = new Date(order.createdAt).toLocaleDateString('en-IN', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric'
+            });
+            if (!groupedOrders[dateKey]) groupedOrders[dateKey] = [];
+            groupedOrders[dateKey].push(order);
+          }
+        });
+      %>
+
+      <% if (Object.keys(groupedOrders).length === 0) { %>
+        <p class="no-orders">No completed orders as of now.</p>
+        <div class="empty-actions">
+          <a href="/place-order" class="action-btn">Place an Order</a>
+          <a href="/accept-order" class="action-btn">Accept an Order</a>
+        </div>
+      <% } else { %>
+        <div class="order-list">
+          <% Object.keys(groupedOrders).forEach(date => { %>
+            <h2 class="date-heading"><%= date %></h2>
+            <% groupedOrders[date].forEach(order => { %>
+              <div class="order-card">
+                <div class="order-details">
+                  <div class="order-info">
+                    <p><strong>Order ID:</strong> <%= order.orderId %></p>
+                    <p><strong>Supplier:</strong> <%= order.supplierName %></p>
+                    <p><strong>Status:</strong> <%= order.status %></p>
+                    <p><strong>Placed At:</strong> <%= new Date(order.createdAt).toLocaleString() %></p>
+                  </div>
+                  <div class="order-actions">
+                    <button class="details-btn" onclick="openOrderModal('<%= order._id %>')">View Details</button>
+                    <a href="/download-order/<%= order._id %>" class="details-btn pdf-btn" target="_blank">Download as PDF</a>
+                  </div>
+                </div>
+              </div>
+            <% }) %>
+          <% }) %>
+        </div>
+      <% } %>
+
+      <div id="order-modal" class="modal">
+        <div class="modal-content">
+          <span class="close-btn" onclick="closeOrderModal()">&times;</span>
+          <div id="order-details"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    async function openOrderModal(orderId) {
+      const modal = document.getElementById('order-modal');
+      const details = document.getElementById('order-details');
+
+      try {
+        const res = await fetch(`/api/order/${orderId}`);
+        const order = await res.json();
+
+        const date = new Date(order.createdAt);
+        const formattedDate = date.toLocaleDateString();
+        const formattedTime = date.toLocaleTimeString();
+
+        details.innerHTML = `
+          <h2 style="text-align:center;">Order #${order.orderId}</h2>
+          <p><strong>Supplier:</strong> ${order.supplierName}</p>
+          <p><strong>Status:</strong> ${order.status}</p>
+          ${order.status === 'Cancelled' ? `<p><strong>Refund Received:</strong> ${order.refundReceived ? 'Yes' : 'No'}</p>` : ''}
+          <p><strong>Date & Time:</strong> ${formattedDate}, ${formattedTime}</p>
+
+          ${renderSection(order.medicines, 'Ordered Medicines', 'Quantity')}
+          ${order.partialAccepted?.length > 0 ? renderSection(order.partialAccepted, 'Partially Accepted Medicines', 'Accepted Qty') : ''}
+          ${order.acceptedRest?.length > 0 ? renderSection(order.acceptedRest, 'Accepted Rest', 'Quantity') : ''}
+          ${order.partialCancelled?.length > 0 ? renderSection(order.partialCancelled, 'Partially Cancelled Medicines', 'Cancelled Qty') : ''}
+          ${order.cancelledRest?.length > 0 ? renderSection(order.cancelledRest, 'Cancelled Rest', 'Quantity') : ''}
+        `;
+
+        modal.style.display = 'block';
+      } catch (err) {
+        alert('Error loading order details');
+      }
+    }
+
+    function renderSection(items, title, qtyLabel) {
+      const rows = items.map(med => `
+        <tr>
+          <td>${med.name}</td>
+          <td>${med.quantity}</td>
+          <td>₹${(med.price * med.quantity).toFixed(2)}</td>
+        </tr>
+      `).join('');
+
+      const total = items.reduce((sum, med) => sum + med.price * med.quantity, 0).toFixed(2);
+
+      return `
+        <h3 style="margin-top: 30px;">${title}</h3>
+        <table class="order-table">
+          <thead>
+            <tr>
+              <th>Medicine</th>
+              <th>${qtyLabel}</th>
+              <th>Total Price</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <p style="text-align:right; font-weight:bold; margin-top:5px;">
+          Total Price = ₹${total}
+        </p>
+      `;
+    }
+
+    function closeOrderModal() {
+      document.getElementById('order-modal').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

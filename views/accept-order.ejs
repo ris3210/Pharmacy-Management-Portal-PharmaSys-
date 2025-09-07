@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Accept Orders</title>
+  <link rel="stylesheet" href="/css/accept-order.css" />
+</head>
+<body>
+  <div class="wrapper">
+    <aside class="sidebar">
+      <h2><a href="/dashboard" class="brand-link">PharmaSys</a></h2>
+      <nav class="menu">
+        <a href="/make-bill">Make Bill</a>
+        <a href="/billing-history">Billing History</a>
+        <a href="/place-order">Place Order</a>
+        <a href="/accept-order">Accept Order</a>
+        <a href="/order-history">Order History</a>
+        <a href="/view-transactions">View Transactions</a>
+        <a href="/manage-medicine">Manage Medicines</a>
+        <a href="/profile">Profile</a>
+        <a href="/logout" class="logout">Logout</a>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <h1 style="text-align: center; margin-bottom: 30px;">Accept Orders</h1>
+
+      <%
+        const visibleOrders = orders.filter(order => {
+          const hasPartialCancel = Array.isArray(order.partialCancelled) && order.partialCancelled.length > 0;
+          const hasCancelledRest = Array.isArray(order.cancelledRest) && order.cancelledRest.length > 0;
+          const hasCancelledItems = hasPartialCancel || hasCancelledRest;
+          const receivedPartial = order.partialRefundReceived;
+          const receivedFull = order.fullRefundReceived;
+          const refundReceived = order.refundReceived;
+          const isFullyCancelled = order.status === 'Cancelled';
+          const wasPendingBeforeCancel = isFullyCancelled && !hasCancelledItems;
+
+          if (refundReceived || receivedFull) return false;
+
+          if (receivedPartial) return false;
+
+          return true;
+        });
+      %>
+
+      <% if (visibleOrders.length === 0) { %>
+        <div class="empty-state" style="text-align: center; font-size: 18px;">
+          <p>No orders to display. Please place an order to get started.</p>
+          <a href="/place-order" class="place-order-btn">Place an Order</a>
+        </div>
+      <% } else { %>
+        <div class="order-list">
+          <% visibleOrders.forEach(order => { 
+            const hasPartialCancel = Array.isArray(order.partialCancelled) && order.partialCancelled.length > 0;
+            const hasCancelledRest = Array.isArray(order.cancelledRest) && order.cancelledRest.length > 0;
+            const hasCancelledItems = hasPartialCancel || hasCancelledRest;
+            const receivedPartial = order.partialRefundReceived;
+            const receivedFull = order.fullRefundReceived;
+            const refundReceived = order.refundReceived;
+            const isFullyCancelled = order.status === 'Cancelled';
+            const wasPendingBeforeCancel = isFullyCancelled && !hasCancelledItems;
+          %>
+            <div class="order-card">
+              <div class="order-details">
+                <p><strong>Order ID:</strong> <%= order.orderId %></p>
+                <p><strong>Supplier:</strong> <%= order.supplierName %></p>
+                <p><strong>Status:</strong> <%= order.status %></p>
+                <p><strong>Placed At:</strong> <%= new Date(order.createdAt).toLocaleString() %></p>
+                <button class="details-btn" onclick="openOrderModal('<%= order._id %>')">View Details</button>
+              </div>
+
+              <div class="action-buttons">
+                <% if (order.status === 'Pending') { %>
+                  <button class="accept-btn" onclick="handleAccept('<%= order._id %>')">Accept</button>
+                  <button class="partial-btn" onclick="openPartialAcceptModal('<%= order._id %>')">Accept Partially</button>
+                  <button class="cancel-btn" onclick="handleCancel('<%= order._id %>')">Cancel</button>
+                  <button class="partial-cancel-btn" onclick="openPartialCancelModal('<%= order._id %>')">Cancel Partially</button>
+                <% } else if (order.status === 'Partially Accepted') { %>
+                  <button class="accept-btn" onclick="confirmAcceptRest('<%= order._id %>')">Accept Rest</button>
+                  <button class="cancel-btn" onclick="confirmCancelRest('<%= order._id %>')">Cancel Rest</button>
+                <% } else if (order.status === 'Partially Cancelled') { %>
+                  <button class="accept-btn" onclick="confirmAcceptRest('<%= order._id %>')">Accept Rest</button>
+                  <button class="cancel-btn" onclick="confirmCancelRest('<%= order._id %>')">Cancel Rest</button>
+                <% } %>
+
+                <% if (
+                  (hasCancelledItems || wasPendingBeforeCancel) &&
+                  !receivedFull &&
+                  !refundReceived &&
+                  !receivedPartial
+                ) { %>
+                  <% if (hasPartialCancel && hasCancelledRest) { %>
+                    <button class="refund-btn" onclick="handleFullRefund('<%= order._id %>')">Receive Full Refund</button>
+                  <% } else if (hasPartialCancel && !hasCancelledRest) { %>
+                    <button class="refund-btn" onclick="handlePartialRefund('<%= order._id %>')">Receive Partial Refund</button>
+                  <% } else if (hasCancelledRest && order.partialAccepted?.length > 0) { %>
+                    <button class="refund-btn" onclick="handlePartialRefund('<%= order._id %>')">Receive Partial Refund</button>
+                  <% } else if (!hasPartialCancel && hasCancelledRest) { %>
+                    <button class="refund-btn" onclick="handleFullRefund('<%= order._id %>')">Receive Full Refund</button>
+                  <% } else if (wasPendingBeforeCancel) { %>
+                    <button class="refund-btn" onclick="handleRefund('<%= order._id %>')">Receive Refund</button>
+                  <% } %>
+                <% } %>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </main>
+
+    <div id="orderModal" class="order-modal hidden">
+      <div class="order-modal-content">
+        <span class="close-btn" onclick="closeOrderModal()">×</span>
+        <div id="orderDetails">Loading...</div>
+      </div>
+    </div>
+
+    <div id="partialAcceptModal" class="order-modal hidden">
+      <div class="order-modal-content">
+        <span class="close-btn" onclick="closePartialAcceptModal()">×</span>
+        <div id="partialAcceptContent">Loading...</div>
+      </div>
+    </div>
+
+    <div id="partialCancelModal" class="order-modal hidden">
+      <div class="order-modal-content">
+        <span class="close-btn" onclick="closePartialCancelModal()">×</span>
+        <div id="partialCancelContent">Loading...</div>
+      </div>
+    </div>
+
+    <script>
+      async function handleAccept(orderId) {
+        try {
+          const res = await fetch(`/order/${orderId}/accept`, { method: 'POST' });
+          const msg = await res.text();
+          alert(msg);
+          location.reload();
+        } catch (err) {
+          alert('Error accepting order');
+        }
+      }
+
+      async function handleCancel(orderId) {
+        try {
+          const res = await fetch(`/order/${orderId}/cancel`, { method: 'POST' });
+          const msg = await res.text();
+          alert(msg);
+          location.reload();
+        } catch (err) {
+          alert('Error cancelling order');
+        }
+      }
+
+      async function handleRefund(orderId) {
+        try {
+          const res = await fetch(`/order/${orderId}/refund`, { method: 'POST' });
+          const msg = await res.text();
+          alert(msg);
+          location.reload();
+        } catch (err) {
+          alert('Error marking refund');
+        }
+      }
+
+      async function openOrderModal(orderId) {
+        const modal = document.getElementById('orderModal');
+        const details = document.getElementById('orderDetails');
+        modal.classList.remove('hidden');
+        details.innerHTML = 'Loading...';
+
+        try {
+          const response = await fetch(`/api/order/${orderId}`);
+          const order = await response.json();
+
+          const createdAt = new Date(order.createdAt);
+          const formattedDate = createdAt.toLocaleDateString('en-IN');
+          const formattedTime = createdAt.toLocaleTimeString('en-IN');
+
+          details.innerHTML = `
+            <h2 style="text-align:center;">Order #${order.orderId}</h2>
+            <p><strong>Supplier:</strong> ${order.supplierName}</p>
+            <p><strong>Status:</strong> ${order.status}</p>
+            ${order.status === 'Cancelled' ? `<p><strong>Refund Received:</strong> ${order.refundReceived ? 'Yes' : 'No'}</p>` : ''}
+            ${order.partialRefundReceived ? `<p><strong>Partial Refund Received:</strong> Yes</p>` : ''}
+            ${order.fullRefundReceived ? `<p><strong>Full Refund Received:</strong> Yes</p>` : ''}
+            <p><strong>Date & Time:</strong> ${formattedDate}, ${formattedTime}</p>
+
+            <h3>Ordered Medicines</h3>
+            <table class="order-table">
+              <thead>
+                <tr>
+                  <th>Medicine</th>
+                  <th>Quantity</th>
+                  <th>Total Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${order.medicines.map(med => `
+                  <tr>
+                    <td>${med.name}</td>
+                    <td>${med.quantity}</td>
+                    <td>₹${(med.price * med.quantity).toFixed(2)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            <p style="text-align:right; font-weight:bold; margin-top:5px;">
+              Total Price = ₹${order.medicines.reduce((sum, med) => sum + med.price * med.quantity, 0).toFixed(2)}
+            </p>
+
+            ${order.partialAccepted && order.partialAccepted.length > 0 ? `
+              <h3 style="margin-top: 30px;">Partially Accepted Medicines</h3>
+              <table class="order-table">
+                <thead>
+                  <tr>
+                    <th>Medicine</th>
+                    <th>Accepted Qty</th>
+                    <th>Total Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${order.partialAccepted.map(med => `
+                    <tr>
+                      <td>${med.name}</td>
+                      <td>${med.quantity}</td>
+                      <td>₹${(med.price * med.quantity).toFixed(2)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+              <p style="text-align:right; font-weight:bold; margin-top:5px;">
+                Total Price = ₹${order.partialAccepted.reduce((sum, med) => sum + med.price * med.quantity, 0).toFixed(2)}
+              </p>
+            ` : ''}
+
+            ${order.partialCancelled && order.partialCancelled.length > 0 ? `
+              <h3 style="margin-top: 30px;">Partially Cancelled Medicines</h3>
+              <table class="order-table">
+                <thead>
+                  <tr>
+                    <th>Medicine</th>
+                    <th>Cancelled Qty</th>
+                    <th>Total Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${order.partialCancelled.map(med => `
+                    <tr>
+                      <td>${med.name}</td>
+                      <td>${med.quantity}</td>
+                      <td>₹${(med.price * med.quantity).toFixed(2)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+              <p style="text-align:right; font-weight:bold; margin-top:5px;">
+                Total Price = ₹${order.partialCancelled.reduce((sum, med) => sum + med.price * med.quantity, 0).toFixed(2)}
+              </p>
+            ` : ''}
+          `;
+        } catch (err) {
+          details.innerHTML = '<p style="color:red;">Failed to load order details.</p>';
+        }
+      }
+
+      function closeOrderModal() {
+        document.getElementById('orderModal').classList.add('hidden');
+      }
+
+      async function openPartialAcceptModal(orderId) {
+        const modal = document.getElementById('partialAcceptModal');
+        const content = document.getElementById('partialAcceptContent');
+        modal.classList.remove('hidden');
+        content.innerHTML = 'Loading...';
+
+        try {
+          const res = await fetch(`/api/order/${orderId}`);
+          const order = await res.json();
+
+          content.innerHTML = `
+            <h2 style="text-align:center;">Accept Partially - Order #${order.orderId}</h2>
+            <form onsubmit="submitPartialAccept(event, '${order._id}')">
+              ${order.medicines.map(med => `
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                  <label style="flex: 1;"><strong>${med.name}</strong> (Max: ${med.quantity})</label>
+                  <input type="number" name="${med.medicineId}" min="0" max="${med.quantity}" value="0" style="width: 80px; padding: 6px;" />
+                </div>
+              `).join('')}
+              <button type="submit" class="accept-btn" style="margin-top:20px;">Submit</button>
+            </form>
+          `;
+        } catch (err) {
+          content.innerHTML = '<p style="color:red;">Failed to load order data.</p>';
+        }
+      }
+
+      async function openPartialCancelModal(orderId) {
+        const modal = document.getElementById('partialCancelModal');
+        const content = document.getElementById('partialCancelContent');
+        modal.classList.remove('hidden');
+        content.innerHTML = 'Loading...';
+
+        try {
+          const res = await fetch(`/api/order/${orderId}`);
+          const order = await res.json();
+
+          content.innerHTML = `
+            <h2 style="text-align:center;">Cancel Partially - Order #${order.orderId}</h2>
+            <form onsubmit="submitPartialCancel(event, '${order._id}')">
+              ${order.medicines.map(med => `
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                  <label style="flex: 1;"><strong>${med.name}</strong> (Max: ${med.quantity})</label>
+                  <input type="number" name="${med.medicineId}" min="0" max="${med.quantity}" value="0" style="width: 80px; padding: 6px;" />
+                </div>
+              `).join('')}
+              <button type="submit" class="cancel-btn" style="margin-top:20px;">Submit</button>
+            </form>
+          `;
+        } catch (err) {
+          content.innerHTML = '<p style="color:red;">Failed to load order data.</p>';
+        }
+      }
+
+      function closePartialAcceptModal() {
+        document.getElementById('partialAcceptModal').classList.add('hidden');
+      }
+
+      function closePartialCancelModal() {
+        document.getElementById('partialCancelModal').classList.add('hidden');
+      }
+
+      async function submitPartialAccept(event, orderId) {
+        event.preventDefault();
+        const form = event.target;
+        const data = {};
+
+        for (const input of form.elements) {
+          if (input.name && input.value > 0) {
+            data[input.name] = parseInt(input.value);
+          }
+        }
+
+        try {
+          const res = await fetch(`/order/${orderId}/partial-accept`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+          const msg = await res.text();
+          alert(msg);
+          location.reload();
+        } catch (err) {
+          alert('Error submitting partial acceptance');
+        }
+      }
+
+      async function submitPartialCancel(event, orderId) {
+        event.preventDefault();
+        const form = event.target;
+        const data = {};
+
+        for (const input of form.elements) {
+          if (input.name && input.value > 0) {
+            data[input.name] = parseInt(input.value);
+          }
+        }
+
+        try {
+          const res = await fetch(`/order/${orderId}/partial-cancel`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+          const msg = await res.text();
+          alert(msg);
+          location.reload();
+        } catch (err) {
+          alert('Error submitting partial cancellation');
+        }
+      }
+
+      async function confirmAcceptRest(orderId) {
+        if (!confirm('Are you sure you want to accept the remaining items?')) return;
+        
+        try {
+          const res = await fetch(`/order/${orderId}/accept-rest`, {
+            method: 'POST'
+          });
+          const msg = await res.text();
+          alert(msg);
+          location.reload();
+        } catch (err) {
+          alert('Error accepting remaining items');
+        }
+      }
+
+      async function confirmCancelRest(orderId) {
+        if (!confirm('Are you sure you want to cancel the remaining items?')) return;
+        
+        try {
+          const res = await fetch(`/order/${orderId}/cancel-rest`, {
+            method: 'POST'
+          });
+          const msg = await res.text();
+          alert(msg);
+          location.reload();
+        } catch (err) {
+          alert('Error cancelling remaining items');
+        }
+      }
+
+      async function handlePartialRefund(orderId) {
+        try {
+          const res = await fetch('/receive-partial-refund/' + orderId, { method: 'POST' })
+          const msg = await res.text();
+          alert(msg);
+          location.reload();
+        } catch (err) {
+          alert('Error receiving remaining partial refund');
+        }
+      }
+
+      async function handleRemainingPartialRefund(orderId) {
+        try {
+          const res = await fetch('/receive-remaining-partial-refund/' + orderId, { method: 'POST' })
+          const msg = await res.text();
+          alert(msg);
+          location.reload();
+        } catch (err) {
+          alert('Error receiving remaining partial refund');
+        }
+      }
+      
+      async function handleFullRefund(orderId) {
+        try {
+          const res = await fetch('/receive-full-refund/' + orderId, { method: 'POST' })
+          const msg = await res.text();
+          alert(msg);
+          location.reload();
+        } catch (err) {
+          alert('Error receiving full refund');
+        }
+      }
+
+    </script>
+  </div>
+</body>
+</html>

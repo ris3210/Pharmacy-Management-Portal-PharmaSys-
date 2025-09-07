@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Place Order</title>
+  <link rel="stylesheet" href="/css/place-order.css" />
+  <style>
+    .form-message {
+      text-align: center;
+      font-size: 16px;
+      font-weight: bold;
+      margin-top: 15px;
+      height: 24px;
+      transition: opacity 0.3s ease;
+    }
+    .form-message.success {
+      color: green;
+    }
+    .form-message.error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-wrapper">
+    <aside class="sidebar">
+      <h2><a href="/dashboard" class="brand-link">PharmaSys</a></h2>
+      <nav class="menu">
+        <a href="/make-bill">Make Bill</a>
+        <a href="/billing-history">Billing History</a>
+        <a href="/place-order">Place Order</a>
+        <a href="/accept-order">Accept Order</a>
+        <a href="/order-history">Order History</a>
+        <a href="/view-transactions">View Transactions</a>
+        <a href="/manage-medicine">Manage Medicines</a>
+        <a href="/profile">Profile</a>
+        <a href="/logout" class="logout">Logout</a>
+      </nav>
+    </aside>
+
+    <div class="main-content">
+      <h1>Place New Order</h1>
+
+      <% if (noMedicines) { %>
+        <div class="no-medicine-warning">
+          <p>You have not added any medicines yet. Please add at least 1 medicine before placing an order.</p>
+          <a href="/manage-medicine" class="go-add-btn">Go to Manage Medicines</a>
+        </div>
+      <% } else { %>
+        <form id="orderForm" class="order-form">
+          <div class="form-row">
+            <label for="supplierName">Supplier Name:</label>
+            <input type="text" name="supplierName" id="supplierName" required />
+          </div>
+
+          <div id="order-fields">
+            <div class="order-entry">
+              <div class="order-header">
+                <label><strong>Medicine & Quantity</strong>&nbsp;&nbsp;</label>
+                <button type="button" class="remove-btn" onclick="removeOrderRow(this)">Remove</button>
+              </div>
+              <div class="order-row">
+                <select onchange="handleSelectChange(this)">
+                  <option value="">-- Select Medicine --</option>
+                  <% medicines.forEach(med => { %>
+                    <option value="<%= med._id %>" data-price="<%= med.price %>" class="<%= med.quantity < 10 ? 'low-stock' : '' %>">
+                      <%= med.name %> (₹<%= med.price %>) - Stock: <%= med.quantity %>
+                    </option>
+                  <% }) %>
+                </select>
+                <input type="number" min="1" oninput="updateOrderPrice(this)" required />
+                <span class="price-display">₹0</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="duplicateMessage" class="form-message error" style="display: none;"></div>
+
+          <div class="total-display">
+            Total Amount = <span id="orderTotal">₹0.00</span>
+          </div>
+
+          <div class="button-group">
+            <button type="button" onclick="addOrderRow()">➕ Add Medicine</button>
+            <button type="submit">📦 Place Order</button>
+          </div>
+
+          <div id="formMessage" class="form-message"></div>
+        </form>
+      <% } %>
+    </div>
+  </div>
+
+  <script>
+    function updateOrderPrice(el) {
+      const row = el.closest('.order-row');
+      const select = row.querySelector('select');
+      const input = row.querySelector('input');
+      const display = row.querySelector('.price-display');
+
+      const price = parseFloat(select.selectedOptions[0]?.dataset.price || 0);
+      const qty = parseInt(input.value) || 0;
+      const total = price * qty;
+
+      display.textContent = `₹${total.toFixed(2)}`;
+      updateOrderTotal();
+    }
+
+    function updateOrderTotal() {
+      let total = 0;
+      document.querySelectorAll('.order-row').forEach(row => {
+        const select = row.querySelector('select');
+        const input = row.querySelector('input');
+        const price = parseFloat(select.selectedOptions[0]?.dataset.price || 0);
+        const qty = parseInt(input.value) || 0;
+        total += price * qty;
+      });
+      document.getElementById('orderTotal').textContent = `₹${total.toFixed(2)}`;
+    }
+
+    function checkForDuplicateMedicines(select) {
+      const selectedIds = new Set();
+      let isDuplicate = false;
+
+      document.querySelectorAll('.order-row select').forEach(s => {
+        if (s !== select && s.value) {
+          selectedIds.add(s.value);
+        }
+      });
+      
+      if (selectedIds.has(select.value)) {
+        isDuplicate = true;
+      }
+
+      const duplicateMessage = document.getElementById('duplicateMessage');
+      if (isDuplicate) {
+        select.value = '';
+        const input = select.closest('.order-row').querySelector('input');
+        if (input) input.value = '';
+        updateOrderPrice(select);
+        duplicateMessage.textContent = 'You cannot select the same medicine more than once.';
+        duplicateMessage.style.display = 'block';
+        setTimeout(() => {
+          duplicateMessage.style.display = 'none';
+          updateOrderPrice(triggeredSelect);
+        }, 3000);
+      } else {
+        updateOrderPrice(select);
+      }
+    }
+
+    function handleSelectChange(select) {
+      updateOrderPrice(select);
+      checkForDuplicateMedicines(select);
+    }
+
+    function addOrderRow() {
+      const container = document.getElementById('order-fields');
+      const entry = container.querySelector('.order-entry');
+      const clone = entry.cloneNode(true);
+
+      clone.querySelector('select').value = '';
+      clone.querySelector('input').value = '';
+      clone.querySelector('.price-display').textContent = '₹0';
+
+      clone.querySelector('select').addEventListener('change', function() {
+        handleSelectChange(this);
+      });
+
+      container.appendChild(clone);
+      toggleRemoveButtons();
+      checkForDuplicateMedicines();
+    }
+
+    function removeOrderRow(button) {
+      const entries = document.querySelectorAll('.order-entry');
+      if (entries.length > 1) {
+        button.closest('.order-entry').remove();
+        updateOrderTotal();
+        toggleRemoveButtons();
+        checkForDuplicateMedicines();
+      }
+    }
+
+    function toggleRemoveButtons() {
+      const entries = document.querySelectorAll('.order-entry');
+      const disable = entries.length === 1;
+
+      entries.forEach(entry => {
+        const btn = entry.querySelector('.remove-btn');
+        if (btn) {
+          btn.classList.toggle('disabled', disable);
+        }
+      });
+    }
+
+    document.getElementById('orderForm').onsubmit = async function(e) {
+      e.preventDefault();
+      const formMessage = document.getElementById('formMessage');
+      const duplicateMessage = document.getElementById('duplicateMessage');
+      formMessage.textContent = '';
+      formMessage.className = 'form-message';
+
+      const supplierName = this.supplierName.value.trim();
+      const entries = Array.from(document.querySelectorAll('.order-entry'));
+      const medicines = [];
+      const selectedIds = new Set();
+      let hasDuplicate = false;
+
+      for (const entry of entries) {
+        const select = entry.querySelector('select');
+        const input = entry.querySelector('input');
+        const medicineId = select.value;
+        const quantity = parseInt(input.value);
+
+        if (!medicineId || !quantity || quantity < 1) {
+          formMessage.textContent = 'Please fill all medicine fields correctly.';
+          formMessage.classList.add('error');
+          return;
+        }
+
+        if (selectedIds.has(medicineId)) {
+          hasDuplicate = true;
+        } else {
+          selectedIds.add(medicineId);
+        }
+
+        medicines.push({ medicineId, quantity });
+      }
+
+      if (hasDuplicate) {
+        duplicateMessage.textContent = 'You cannot select the same medicine more than once.';
+        duplicateMessage.style.display = 'block';
+        return;
+      }
+
+      try {
+        const response = await fetch('/place-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ supplierName, medicines })
+        });
+
+        if (response.ok) {
+          const responseText = await response.text();
+          formMessage.textContent = responseText;
+          formMessage.classList.add('success');
+          setTimeout(() => {
+            formMessage.textContent = '';
+            formMessage.classList.remove('success');
+          }, 3000);
+
+          this.reset();
+          document.getElementById('orderTotal').textContent = '₹0.00';
+          duplicateMessage.style.display = 'none';
+
+          const container = document.getElementById('order-fields');
+          const firstEntry = container.querySelector('.order-entry');
+          container.innerHTML = '';
+          const newEntry = firstEntry.cloneNode(true);
+          newEntry.querySelector('select').value = '';
+          newEntry.querySelector('input').value = '';
+          newEntry.querySelector('.price-display').textContent = '₹0';
+          newEntry.querySelector('select').addEventListener('change', function() {
+            handleSelectChange(this);
+          });
+          container.appendChild(newEntry);
+
+          toggleRemoveButtons();
+        } else {
+          const errorText = await response.text();
+          formMessage.textContent = 'Error: ' + errorText;
+          formMessage.classList.add('error');
+        }
+      } catch (err) {
+        console.error('Order error:', err);
+        formMessage.textContent = 'Something went wrong!';
+        formMessage.classList.add('error');
+      }
+    };
+
+    window.onload = () => {
+      updateOrderTotal();
+      toggleRemoveButtons();
+      document.querySelectorAll('.order-row select').forEach(select => {
+        select.addEventListener('change', function() {
+          handleSelectChange(this);
+        });
+      });
+    };
+  </script>
+</body>
+</html>

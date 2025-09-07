@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Manage Medicines</title>
+  <link rel="stylesheet" href="/css/manage-medicine.css" />
+</head>
+<body>
+  <div class="dashboard-wrapper">
+    <aside class="sidebar">
+      <h2><a href="/dashboard" class="brand-link">PharmaSys</a></h2>
+      <nav class="menu">
+        <a href="/make-bill">Make Bill</a>
+        <a href="/billing-history">Billing History</a>
+        <a href="/place-order">Place Order</a>
+        <a href="/accept-order">Accept Order</a>
+        <a href="/order-history">Order History</a>
+        <a href="/view-transactions">View Transactions</a>
+        <a href="/manage-medicine">Manage Medicines</a>
+        <a href="/profile">Profile</a>
+        <a href="/logout" class="logout">Logout</a>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <h1>Current Medicine Stocks</h1>
+
+      <div id="medicineSection">
+        <div id="medicineCards" class="medicine-cards"></div>
+        <p id="noMedicinesMsg" class="no-medicines hidden">No medicines have been added so far.</p>
+      </div>
+
+      <button id="addMedicineBtn" class="add-medicine-button">Add Medicine</button>
+
+      <div id="medicineModal" class="modal">
+        <div class="modal-content">
+          <span class="close-button">&times;</span>
+          <h2>Add Medicine</h2>
+          <form id="medicineForm">
+            <label for="add-name">Medicine Name</label>
+            <input type="text" id="add-name" name="name" placeholder="Medicine Name" required />
+
+            <label for="add-quantity">Quantity</label>
+            <input type="number" id="add-quantity" name="quantity" placeholder="Quantity" required />
+
+            <label for="add-price">Price</label>
+            <input type="number" id="add-price" name="price" step="0.01" placeholder="Price" required />
+
+            <div id="formMessage" class="form-message"></div>
+            <button type="submit">Save</button>
+          </form>
+        </div>
+      </div>
+
+      <div id="editMedicineModal" class="modal">
+        <div class="modal-content">
+          <span class="close-edit-button">&times;</span>
+          <h2>Edit Medicine</h2>
+          <form id="editMedicineForm">
+            <input type="hidden" name="id" />
+
+            <label for="edit-name">Medicine Name</label>
+            <input type="text" id="edit-name" name="name" placeholder="Medicine Name" required />
+
+            <label for="edit-quantity">Quantity</label>
+            <input type="number" id="edit-quantity" name="quantity" placeholder="Quantity" required />
+
+            <label for="edit-price">Price</label>
+            <input type="number" id="edit-price" name="price" step="0.01" placeholder="Price" required />
+
+            <div id="editFormMessage" class="form-message"></div>
+            <button type="submit">Save</button>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const modal = document.getElementById("medicineModal");
+    const btn = document.getElementById("addMedicineBtn");
+    const span = document.querySelector(".close-button");
+
+    btn.onclick = () => { modal.style.display = "block"; };
+    span.onclick = () => { modal.style.display = "none"; };
+    window.onclick = (event) => {
+      if (event.target === modal) modal.style.display = "none";
+    };
+
+    document.getElementById("medicineForm").onsubmit = async function(e) {
+      e.preventDefault();
+      const name = this.name.value.trim();
+      const quantity = this.quantity.value;
+      const price = this.price.value;
+      const messageBox = document.getElementById("formMessage");
+      messageBox.textContent = "";
+      messageBox.className = "form-message";
+
+      try {
+        const existingResponse = await fetch('/medicines');
+        const existingMedicines = await existingResponse.json();
+        const nameLower = name.toLowerCase();
+        const duplicate = existingMedicines.some(med => med.name.toLowerCase() === nameLower);
+        if (duplicate) {
+          showMessage(`Medicine "${name}" already exists.`);
+          return;
+        }
+
+        const response = await fetch('/add-medicine', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, quantity, price })
+        });
+
+        if (response.ok) {
+          showMessage("Medicine saved successfully!", true);
+          this.reset();
+          loadMedicines();
+        } else {
+          const errorText = await response.text();
+          showMessage("Error: " + errorText);
+        }
+      } catch (err) {
+        console.error("Fetch error:", err);
+        showMessage("Something went wrong!");
+      }
+
+      function showMessage(text, isSuccess = false) {
+        messageBox.textContent = text;
+        messageBox.classList.add("visible");
+        if (isSuccess) messageBox.classList.add("success");
+        setTimeout(clearMessage, 3000);
+      }
+
+      function clearMessage() {
+        messageBox.classList.remove("visible", "success");
+        messageBox.textContent = "";
+      }
+    };
+
+    async function loadMedicines() {
+      try {
+        const response = await fetch('/medicines');
+        const medicines = await response.json();
+        const container = document.getElementById("medicineCards");
+        const noMedicinesMsg = document.getElementById("noMedicinesMsg");
+        container.innerHTML = "";
+
+        if (medicines.length === 0) {
+          noMedicinesMsg.classList.remove("hidden");
+        } else {
+          noMedicinesMsg.classList.add("hidden");
+          medicines.forEach(med => {
+            const card = document.createElement("div");
+            card.className = "medicine-card";
+            card.innerHTML = `
+              <div class="card-header">
+                <h3>${med.name}</h3>
+                <button class="edit-btn" onclick="openEditModal('${med._id}', '${med.name}', ${med.quantity}, ${med.price})">Edit</button>
+              </div>
+              <p><strong>Quantity:</strong> ${med.quantity}</p>
+              <p><strong>Price:</strong> ₹${parseFloat(med.price).toFixed(2)}</p>
+            `;
+            container.appendChild(card);
+          });
+        }
+      } catch (err) {
+        console.error("Error loading medicines:", err);
+      }
+    }
+
+    window.onload = loadMedicines;
+
+    const editModal = document.getElementById("editMedicineModal");
+    const closeEditBtn = document.querySelector(".close-edit-button");
+
+    function openEditModal(id, name, quantity, price) {
+      const form = document.getElementById("editMedicineForm");
+      form.id.value = id;
+      form.name.value = name;
+      form.quantity.value = quantity;
+      form.price.value = price;
+      editModal.style.display = "block";
+    }
+
+    closeEditBtn.onclick = () => { editModal.style.display = "none"; };
+    window.onclick = (event) => {
+      if (event.target === editModal) editModal.style.display = "none";
+    };
+
+    document.getElementById("editMedicineForm").onsubmit = async function(e) {
+      e.preventDefault();
+      const id = this.id.value;
+      const name = this.name.value.trim();
+      const quantity = this.quantity.value;
+      const price = this.price.value;
+      const messageBox = document.getElementById("editFormMessage");
+      messageBox.textContent = "";
+      messageBox.className = "form-message";
+
+      try {
+        const response = await fetch(`/update-medicine/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, quantity, price })
+        });
+
+        if (response.ok) {
+          showEditMessage("Medicine updated successfully!", true);
+          loadMedicines();
+          setTimeout(() => {
+            editModal.style.display = "none";
+            clearEditMessage();
+          }, 3000);
+        } else {
+          const errorText = await response.text();
+          showEditMessage("Error: " + errorText);
+        }
+      } catch (err) {
+        console.error("Update error:", err);
+        showEditMessage("Something went wrong!");
+      }
+
+      function showEditMessage(text, isSuccess = false) {
+        messageBox.textContent = text;
+       messageBox.classList.add("visible");
+        if (isSuccess) messageBox.classList.add("success");
+        setTimeout(clearEditMessage, 3000);
+      }
+
+      function clearEditMessage() {
+        messageBox.classList.remove("visible", "success");
+        messageBox.textContent = "";
+      }
+    };
+  </script>
+</body>
+</html>

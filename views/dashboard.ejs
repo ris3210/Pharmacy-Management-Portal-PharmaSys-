@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="/css/dashboard.css" />
+</head>
+<body>
+  <div class="dashboard-wrapper">
+    
+    <aside class="sidebar">
+      <h2><a href="/dashboard" class="brand-link">PharmaSys</a></h2>
+      <nav class="menu">
+        <a href="/make-bill">Make Bill</a>
+        <a href="/billing-history">Billing History</a>
+        <a href="/place-order">Place Order</a>
+        <a href="/accept-order">Accept Order</a>
+        <a href="/order-history">Order History</a>
+        <a href="/view-transactions">View Transactions</a>
+        <a href="/manage-medicine">Manage Medicines</a>
+        <a href="/profile">Profile</a>
+        <a href="/logout" class="logout">Logout</a>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <div class="welcome-message">Welcome, <%= user.username %>!</div>
+      <p class="datetime" id="datetime"></p>
+    </main>
+
+  </div>
+
+  <script>
+    function updateDateTime() {
+      const now = new Date();
+      const day = String(now.getDate()).padStart(2, '0');
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const year = now.getFullYear();
+      
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      
+      const formattedDate = `${day}/${month}/${year}`;
+      const formattedTime = `${hours}:${minutes}:${seconds}`;
+      document.getElementById('datetime').textContent = `${formattedDate} ${formattedTime}`;
+    }
+    setInterval(updateDateTime, 1000);
+    updateDateTime();
+  </script>
+</body>
+</html>

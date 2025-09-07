@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Make Bill</title>
+  <link rel="stylesheet" href="/css/bill.css" />
+  <style>
+    .form-message {
+      text-align: center;
+      font-size: 16px;
+      font-weight: bold;
+      margin-top: 15px;
+      height: 24px;
+      transition: opacity 0.3s ease;
+    }
+    .form-message.success {
+      color: green;
+    }
+    .form-message.error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <aside class="sidebar">
+      <h2><a href="/dashboard" class="brand-link">PharmaSys</a></h2>
+      <nav class="menu">
+        <a href="/make-bill">Make Bill</a>
+        <a href="/billing-history">Billing History</a>
+        <a href="/place-order">Place Order</a>
+        <a href="/accept-order">Accept Order</a>
+        <a href="/order-history">Order History</a>
+        <a href="/view-transactions">View Transactions</a>
+        <a href="/manage-medicine">Manage Medicines</a>
+        <a href="/profile">Profile</a>
+        <a href="/logout" class="logout">Logout</a>
+      </nav>
+    </aside>
+
+    <div class="main-content">
+      <h1>Create Bill</h1>
+
+      <% if (noMedicines) { %>
+        <div class="no-medicine-warning">
+          <p>You have not added any medicines yet. Please add at least 1 medicine before trying.</p>
+          <a href="/manage-medicine" class="go-add-btn">Go to Manage Medicines</a>
+        </div>
+      <% } else { %>
+        <form id="billForm" class="bill-form">
+          <div class="form-row">
+            <label for="customerName">Customer Name:</label>
+            <input type="text" name="customerName" id="customerName" required />
+          </div>
+
+          <div class="form-row">
+            <label for="mobileNumber">Mobile Number:</label>
+            <input type="text" name="mobileNumber" id="mobileNumber" pattern="[6-9]{1}[0-9]{9}" required />
+          </div>
+
+          <div id="medicine-fields">
+            <div class="medicine-entry">
+              <div class="medicine-header">
+                <label>Medicine & Quantity</label>
+                <span class="remove-link inactive">Remove</span>
+              </div>
+              <div class="medicine-row">
+                <select onchange="updateStock(this)">
+                  <option value="">-- Select Medicine --</option>
+                  <% medicines.forEach(med => { %>
+                    <option value="<%= med._id %>" data-stock="<%= med.quantity %>" data-price="<%= med.price %>">
+                      <%= med.name %> (₹<%= med.price %>) - Stock: <%= med.quantity %>
+                    </option>
+                  <% }) %>
+                </select>
+                <input type="number" min="1" oninput="checkStock(this)" required />
+                <span class="price-display">₹0</span>
+              </div>
+              <div class="stock-warning"></div>
+            </div>
+          </div>
+
+          <div class="total-display">
+            <strong>Total Amount:</strong> <span id="totalAmount">₹0.00</span>
+          </div>
+
+          <div class="button-group">
+            <button type="button" onclick="addMedicine()">➕ Add Medicine</button>
+            <button type="submit">🧾 Generate Bill</button>
+          </div>
+
+          <div id="formMessage" class="form-message"></div>
+        </form>
+      <% } %>
+    </div>
+  </div>
+
+  <script>
+    let index = 1;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('bill') === 'success') {
+      const billNumber = urlParams.get('number');
+      showMessage(`Bill #${billNumber} generated successfully. Go to billing history to view it.`, 'success');
+      setTimeout(() => {
+        showMessage('', '');
+        window.history.replaceState({}, document.title, '/make-bill');
+      }, 3000);
+    }
+
+    let medicineOptions = '';
+    const selectedMedicines = new Set();
+
+    window.onload = () => {
+      const select = document.querySelector('select');
+      medicineOptions = Array.from(select.options)
+        .map(opt => opt.outerHTML)
+        .join('');
+      updateRemoveLinks();
+    };
+
+    function updateStock(select) {
+      const input = select.parentElement.querySelector('input[type="number"]');
+      const priceDisplay = select.parentElement.querySelector('.price-display');
+      const warning = select.closest('.medicine-entry').querySelector('.stock-warning');
+      const medicineId = select.value;
+
+      if (medicineId === '') {
+        input.value = '';
+        input.dataset.stock = '0';
+        input.dataset.price = '0';
+        priceDisplay.textContent = '₹0';
+        priceDisplay.style.color = '#007bff';
+        warning.textContent = '';
+        updateTotal();
+        return;
+      }
+
+      if (selectedMedicines.has(medicineId)) {
+        const selectedName = select.options[select.selectedIndex].text.split(' (')[0];
+        select.value = '';
+        warning.textContent = `${selectedName} already selected`;
+        warning.style.color = 'red';
+        setTimeout(() => {
+          warning.textContent = '';
+          warning.style.color = '';
+        }, 3000);
+        input.value = '';
+        priceDisplay.textContent = '₹0';
+        updateTotal();
+        return;
+      }
+
+      selectedMedicines.add(medicineId);
+      warning.textContent = '';
+      warning.style.color = '';
+      const stock = select.options[select.selectedIndex].dataset.stock;
+      const price = select.options[select.selectedIndex].dataset.price;
+      input.dataset.stock = stock || 0;
+      input.dataset.price = price || 0;
+      checkStock(input);
+      updateTotal();
+    }
+
+    function checkStock(input) {
+      const entered = parseInt(input.value);
+      const available = parseInt(input.dataset.stock);
+      const price = parseFloat(input.dataset.price);
+      const warning = input.closest('.medicine-entry').querySelector('.stock-warning');
+      const priceDisplay = input.closest('.medicine-row').querySelector('.price-display');
+
+      if (entered > available) {
+        warning.textContent = `Only ${available} is present in stock`;
+        priceDisplay.style.color = 'red';
+      } else {
+        warning.textContent = '';
+        priceDisplay.style.color = '#007bff';
+      }
+
+      if (!isNaN(entered) && !isNaN(price)) {
+        priceDisplay.textContent = `₹${(entered * price).toFixed(2)}`;
+      } else {
+        priceDisplay.textContent = '₹0';
+      }
+
+      updateTotal();
+    }
+
+    function updateTotal() {
+      let total = 0;
+      const entries = document.querySelectorAll('.medicine-entry');
+
+      entries.forEach(entry => {
+        const input = entry.querySelector('input[type="number"]');
+        const quantity = parseInt(input.value);
+        const price = parseFloat(input.dataset.price);
+
+        if (!isNaN(quantity) && !isNaN(price)) {
+          total += quantity * price;
+        }
+      });
+
+      document.getElementById('totalAmount').textContent = `₹${total.toFixed(2)}`;
+    }
+
+    function addMedicine() {
+      const container = document.getElementById('medicine-fields');
+      const entry = document.createElement('div');
+      entry.className = 'medicine-entry';
+      entry.innerHTML = `
+        <div class="medicine-header">
+          <label>Medicine & Quantity</label>
+          <span class="remove-link" onclick="removeMedicine(this)">Remove</span>
+        </div>
+        <div class="medicine-row">
+          <select onchange="updateStock(this)">
+            ${medicineOptions}
+          </select>
+          <input type="number" min="1" oninput="checkStock(this)" required />
+          <span class="price-display">₹0</span>
+        </div>
+        <div class="stock-warning"></div>
+      `;
+      container.appendChild(entry);
+      index++;
+      updateRemoveLinks();
+    }
+
+    function removeMedicine(el) {
+      const entry = el.closest('.medicine-entry');
+      const select = entry.querySelector('select');
+      const medicineId = select.value;
+      if (medicineId) selectedMedicines.delete(medicineId);
+      entry.remove();
+      updateRemoveLinks();
+      updateTotal();
+    }
+
+    function updateRemoveLinks() {
+      const entries = document.querySelectorAll('.medicine-entry');
+      entries.forEach((entry) => {
+        const remove = entry.querySelector('.remove-link');
+        if (entries.length === 1) {
+          remove.classList.add('inactive');
+          remove.removeAttribute('onclick');
+        } else {
+          remove.classList.remove('inactive');
+          remove.setAttribute('onclick', 'removeMedicine(this)');
+        }
+      });
+    }
+
+    function showMessage(text, type) {
+      const msg = document.getElementById('formMessage');
+      msg.textContent = text;
+      msg.className = `form-message ${type}`;
+
+      setTimeout(() => {
+        msg.textContent = '';
+        msg.className = 'form-message';
+      }, 3000);
+    }
+
+    document.getElementById('billForm').addEventListener('submit', async function (event) {
+      event.preventDefault();
+
+      const entries = document.querySelectorAll('.medicine-entry');
+      let valid = true;
+      const medicines = [];
+
+      entries.forEach(entry => {
+        const select = entry.querySelector('select');
+        const input = entry.querySelector('input[type="number"]');
+        const quantity = parseInt(input.value);
+        const stock = parseInt(input.dataset.stock);
+        const medicineId = select.value;
+
+        if (quantity > stock) {
+          valid = false;
+        }
+
+        medicines.push({ medicineId, quantity });
+      });
+
+      if (!valid) {
+        showMessage('Stocks not available.', 'error');
+        return;
+      }
+
+      const customerName = document.getElementById('customerName').value;
+      const mobileNumber = document.getElementById('mobileNumber').value;
+
+      try {
+        const response = await fetch('/make-bill', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ customerName, mobileNumber, medicines }),
+          credentials: 'include'
+        });
+
+        if(response.redirected) {
+          window.location.href=response.url;
+          return;
+        }
+
+        if (response.ok) {
+          const result = await response.json();
+          const billNumber = result.billNumber;
+          document.getElementById('customerName').value = '';
+          document.getElementById('mobileNumber').value = '';
+          document.getElementById('medicine-fields').innerHTML = '';
+          selectedMedicines.clear();
+          addMedicine();
+          updateTotal();
+          window.location.href = `/make-bill?bill=success&number=${billNumber}`;
+        } else {
+          const result = await response.json();
+          showMessage(result.error || 'Error generating bill.', 'error');
+        }
+      } catch (err) {
+        console.error(err);
+        showMessage('Server error. Please try again.', 'error');
+      }
+    });
+  </script>
+</body>
+</html>

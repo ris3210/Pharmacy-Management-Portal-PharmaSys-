@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Profile</title>
+  <link rel="stylesheet" href="/css/profile.css"/>
+  <style>
+    .profile-static p {
+      font-size: 21px;
+      margin: 14px 0;
+    }
+
+    .profile-static strong {
+      display: inline-block;
+      width: 160px;
+      font-weight: 600;
+    }
+
+    .profile-editable input,
+    .profile-editable textarea {
+      font-size: 18px;
+      padding: 8px;
+      width: 100%;
+      margin-top: 6px;
+    }
+
+    .profile-field {
+      margin-bottom: 20px;
+    }
+
+    .edit-btn {
+      margin-top: 6px;
+      padding: 6px 12px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .action-buttons {
+      margin-top: 30px;
+      text-align: center;
+    }
+
+    #update-btn,
+    #back-btn,
+    #save-btn:enabled {
+      background-color: #28a745;
+    }
+
+    #save-btn:disabled {
+      background-color: grey;
+      cursor: not-allowed;
+    }
+
+    .action-buttons button:hover:enabled {
+      opacity: 0.9;
+    }
+
+    .save-message {
+      margin-top: 15px;
+      color: #28a745;
+      font-size: 20px;
+      font-weight: 600;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-wrapper">
+    
+    <aside class="sidebar">
+      <h2><a href="/dashboard" class="brand-link">PharmaSys</a></h2>
+      <nav class="menu">
+        <a href="/make-bill">Make Bill</a>
+        <a href="/billing-history">Billing History</a>
+        <a href="/place-order">Place Order</a>
+        <a href="/accept-order">Accept Order</a>
+        <a href="/order-history">Order History</a>
+        <a href="/view-transactions">View Transactions</a>
+        <a href="/manage-medicine">Manage Medicines</a>
+        <a href="/profile">Profile</a>
+        <a href="/logout" class="logout">Logout</a>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <div class="profile-card">
+        <h1>Profile Information :-</h1>
+
+        <div class="profile-static">
+          <p><strong>Username:</strong> <%= user.username || '' %></p>
+          <p><strong>Shop Name:</strong> <%= user.shopName || '' %></p>
+          <p><strong>Mobile:</strong> <%= user.mobile || '' %></p>
+          <p><strong>Email:</strong> <%= user.email || '' %></p>
+          <p><strong>Address:</strong> <%= user.address || '' %></p>
+        </div>
+
+        <form id="profile-form" class="profile-editable" style="display: none;">
+          <div class="profile-field">
+            <label>Shop Name:</label>
+            <input type="text" name="shopName" value="<%= user.shopName || '' %>" readonly />
+            <button type="button" class="edit-btn">Edit</button>
+          </div>
+
+          <div class="profile-field">
+            <label>Mobile:</label>
+            <input type="text" name="mobile" value="<%= user.mobile || '' %>" readonly />
+            <button type="button" class="edit-btn">Edit</button>
+          </div>
+
+          <div class="profile-field">
+            <label>Email:</label>
+            <input type="email" name="email" value="<%= user.email || '' %>" readonly />
+            <button type="button" class="edit-btn">Edit</button>
+          </div>
+
+          <div class="profile-field">
+            <label for="address">Address:</label>
+            <textarea id="address" name="address" rows="3" readonly><%= user.address || '' %></textarea>
+            <button type="button" class="edit-btn">Edit</button>
+          </div>
+
+          <p id="save-message" class="save-message">Changes saved, Redirecting to profile info...</p>
+        </form>
+
+        <div class="action-buttons">
+          <button id="update-btn" type="button">Update Profile</button>
+          <button id="save-btn" type="button" disabled style="display: none;">Save Changes</button>
+          <button id="back-btn" type="button" style="display: none;">Back</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const updateBtn = document.getElementById('update-btn');
+    const saveBtn = document.getElementById('save-btn');
+    const backBtn = document.getElementById('back-btn');
+    const editableSection = document.querySelector('.profile-editable');
+    const staticSection = document.querySelector('.profile-static');
+    const inputs = editableSection.querySelectorAll('input, textarea');
+    const saveMessage = document.getElementById('save-message');
+    const form = document.getElementById('profile-form');
+
+    updateBtn.addEventListener('click', () => {
+      staticSection.style.display = 'none';
+      editableSection.style.display = 'block';
+      updateBtn.style.display = 'none';
+      saveBtn.style.display = 'inline-block';
+      backBtn.style.display = 'inline-block';
+      saveBtn.disabled = true;
+
+      document.querySelectorAll('.profile-field').forEach(field => {
+        const input = field.querySelector('input, textarea');
+        const button = field.querySelector('.edit-btn');
+        if (input && button) {
+          button.textContent = input.value.trim() === '' ? 'Add' : 'Edit';
+        }
+      });
+    });
+
+    inputs.forEach(input => {
+      input.addEventListener('input', () => {
+        saveBtn.disabled = false;
+      });
+    });
+
+    document.querySelectorAll('.edit-btn').forEach(button => {
+      button.addEventListener('click', function(e) {
+        e.preventDefault();
+        const field = this.closest('.profile-field');
+        const input = field.querySelector('input, textarea');
+        if (input.readOnly) {
+          input.readOnly = false;
+          input.focus();
+          this.textContent = 'Save';
+        } else {
+          input.readOnly = true;
+          this.textContent = input.value.trim() === '' ? 'Add' : 'Edit';
+        }
+      });
+    });
+
+    saveBtn.addEventListener('click', () => {
+      const formData = {};
+      inputs.forEach(input => {
+        formData[input.name] = input.value;
+      });
+
+      fetch('/profile/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      })
+      .then(response => {
+        if (response.ok) {
+          saveMessage.style.display = 'block';
+          saveBtn.disabled = true;
+
+          setTimeout(() => {
+            window.location.href = '/profile';
+          }, 2000);
+        } else {
+          alert('Failed to save changes');
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Error while saving changes');
+      });
+    });
+
+    backBtn.addEventListener('click', () => {
+      editableSection.style.display = 'none';
+      staticSection.style.display = 'block';
+      updateBtn.style.display = 'inline-block';
+      saveBtn.style.display = 'none';
+      backBtn.style.display = 'none';
+      saveMessage.style.display = 'none';
+    });
+  </script>
+</body>
+</html>

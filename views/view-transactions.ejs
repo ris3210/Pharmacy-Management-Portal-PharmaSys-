@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>View Transactions</title>
+  <link rel="stylesheet" href="/css/view-transactions.css" />
+</head>
+<body>
+  <div class="wrapper">
+    <aside class="sidebar">
+      <h2><a href="/dashboard" class="brand-link">PharmaSys</a></h2>
+      <nav class="menu">
+        <a href="/make-bill">Make Bill</a>
+        <a href="/billing-history">Billing History</a>
+        <a href="/place-order">Place Order</a>
+        <a href="/accept-order">Accept Order</a>
+        <a href="/order-history">Order History</a>
+        <a href="/view-transactions">View Transactions</a>
+        <a href="/manage-medicine">Manage Medicines</a>
+        <a href="/profile">Profile</a>
+        <a href="/logout" class="logout">Logout</a>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <h1 class="transaction-heading">Transaction History</h1>
+
+      <% if (Object.keys(groupedTransactions).length === 0) { %>
+        <p class="no-orders">No transactions found for your account.</p>
+      <% } else { %>
+        <div class="order-list">
+          <% Object.keys(groupedTransactions).slice().reverse().forEach(date => { %>
+            <h2 class="date-heading"><%= date %></h2>
+            <% const reversedTxs = groupedTransactions[date].slice().reverse(); %>
+            <% reversedTxs.forEach(tx => {
+              const txDate = new Date(tx.time);
+              const fullDateTime = txDate.toLocaleString('en-IN', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: 'numeric',
+                hour12: true
+              });
+
+              let amountClass = '';
+              if (tx.type === 'Bill' || tx.type === 'Refund') {
+                amountClass = 'amount-green';
+              } else if (tx.type === 'Order') {
+                amountClass = 'amount-red';
+              }
+            %>
+              <div class="order-card">
+                <div class="order-details">
+                  <div class="order-info">
+                    <p class="transaction-type"><%= tx.label %></p>
+                    <p class="transaction-name">
+                      <strong>
+                        <%= tx.type === 'Bill' ? 'Customer' : tx.type === 'Order' ? 'Supplier' : 'Type' %>:
+                      </strong>
+                      <%= tx.name %>
+                    </p>
+                    <p class="transaction-time"><strong>Date & Time:</strong> <%= fullDateTime %></p>
+                  </div>
+                  <div class="order-actions">
+                    <p class="<%= amountClass %>">₹<%= tx.amount.toFixed(2) %></p>
+                  </div>
+                </div>
+              </div>
+            <% }) %>
+          <% }) %>
+        </div>
+      <% } %>
+    </main>
+  </div>
+</body>
+</html>

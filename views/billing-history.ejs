@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Billing History</title>
+  <link rel="stylesheet" href="/css/bill-history.css" />
+</head>
+<body>
+  <div class="wrapper">
+    <aside class="sidebar">
+      <h2><a href="/dashboard" class="brand-link">PharmaSys</a></h2>
+      <nav class="menu">
+        <a href="/make-bill">Make Bill</a>
+        <a href="/billing-history">Billing History</a>
+        <a href="/place-order">Place Order</a>
+        <a href="/accept-order">Accept Order</a>
+        <a href="/order-history">Order History</a>
+        <a href="/view-transactions">View Transactions</a>
+        <a href="/manage-medicine">Manage Medicines</a>
+        <a href="/profile">Profile</a>
+        <a href="/logout" class="logout">Logout</a>
+      </nav>
+    </aside>
+
+    <div class="main-content">
+      <h1>Billing History</h1>
+
+      <%
+        const groupedBills = {};
+        bills.forEach(bill => {
+          const dateKey = new Date(bill.createdAt).toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+          });
+          if (!groupedBills[dateKey]) groupedBills[dateKey] = [];
+          groupedBills[dateKey].push(bill);
+        });
+      %>
+
+      <% if (Object.keys(groupedBills).length === 0) { %>
+        <div class="no-bills-wrapper">
+          <p class="no-bills">No bills have been generated yet.</p>
+          <a href="/make-bill" class="btn generate-btn">Generate Bill</a>
+        </div>
+      <% } else { %>
+        <div class="bill-entry-container">
+          <% Object.keys(groupedBills).forEach(date => { %>
+            <h2 class="date-heading"><%= date %></h2>
+            <% groupedBills[date].forEach(bill => {
+              const createdAt = new Date(bill.createdAt);
+              const hours = createdAt.getHours();
+              const minutes = createdAt.getMinutes().toString().padStart(2, '0');
+              const ampm = hours >= 12 ? 'PM' : 'AM';
+              const hour12 = hours % 12 || 12;
+              const formattedTime = `${hour12}:${minutes} ${ampm}`;
+            %>
+              <div class="bill-entry">
+                <div class="bill-header">
+                  <h2>Bill #<%= bill.billNumber %></h2>
+                  <span class="bill-date"><%= date %>, <%= formattedTime %></span>
+                </div>
+                <p><strong>Customer:</strong> <%= bill.customerName %></p>
+                <p><strong>Mobile:</strong> <%= bill.mobileNumber %></p>
+                <div class="bill-actions">
+                  <button class="btn view-btn" onclick="openBillModal('<%= bill._id %>')">View Bill</button>
+                  <a href="/download-bill/<%= bill._id %>" class="btn pdf-btn" target="_blank">Download as PDF</a>
+                </div>
+              </div>
+            <% }) %>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <div id="billModal" class="bill-modal hidden">
+    <div class="bill-modal-content">
+      <span class="close-btn" onclick="closeBillModal()">×</span>
+      <div id="billDetails">Loading...</div>
+    </div>
+  </div>
+
+  <script>
+    async function openBillModal(billId) {
+      const modal = document.getElementById('billModal');
+      const details = document.getElementById('billDetails');
+      modal.classList.remove('hidden');
+      details.innerHTML = 'Loading...';
+
+      try {
+        const response = await fetch(`/api/bill/${billId}`);
+        if (!response.ok) throw new Error('Failed to fetch');
+        const bill = await response.json();
+
+        const createdAt = new Date(bill.createdAt);
+        const formattedDate = createdAt.toLocaleDateString('en-IN');
+        const hours = createdAt.getHours();
+        const minutes = createdAt.getMinutes().toString().padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const hour12 = hours % 12 || 12;
+        const formattedTime = `${hour12}:${minutes} ${ampm}`;
+
+        details.innerHTML = `
+          <h2 style="text-align:center;">Bill #${bill.billNumber}</h2>
+          <p><strong>Name:</strong> ${bill.customerName}</p>
+          <p><strong>Mobile:</strong> ${bill.mobileNumber}</p>
+          <p><strong>Date & Time:</strong> ${formattedDate}, ${formattedTime}</p>
+
+          <table class="bill-table">
+            <thead>
+              <tr>
+                <th>Medicine</th>
+                <th>Quantity</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${bill.medicines.map(med => `
+                <tr>
+                  <td>${med.name}</td>
+                  <td>${med.quantity}</td>
+                  <td>₹${(med.quantity * med.price).toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <h3 style="text-align:right; margin-top:20px;">Total = ₹${bill.totalAmount.toFixed(2)}</h3>
+        `;
+      } catch (err) {
+        details.innerHTML = '<p style="color:red;">Failed to load bill details.</p>';
+      }
+    }
+
+    function closeBillModal() {
+      document.getElementById('billModal').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,231 @@
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #f4f4f4;
+}
+
+.wrapper {
+  display: flex;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 220px;
+  background-color: #007bff;
+  color: white;
+  padding: 20px;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar h2 {
+  margin-top: 0;
+  font-size: 24px;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.brand-link {
+  color: white;
+  text-decoration: none;
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.menu a {
+  color: white;
+  text-decoration: none;
+  padding: 10px;
+  border-radius: 6px;
+  background-color: rgba(255, 255, 255, 0.2);
+  transition: background-color 0.3s ease;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.menu a.logout {
+  background-color: #ff0000;
+}
+
+.menu a:hover {
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
+.menu a.logout:hover {
+  background-color: #dc143d;
+}
+
+.main-content {
+  flex: 1;
+  padding: 60px;
+  background: url('/images/image4.jpg') no-repeat center center;
+  background-size: cover;
+  overflow-y: auto;
+  min-width: 700px;
+}
+
+.main-content h1 {
+  font-size: 28px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 30px;
+  color: #333;
+}
+
+.bill-form {
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 30px;
+  border-radius: 10px;
+  max-width: 700px;
+  margin: auto;
+  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.form-row label {
+  font-weight: bold;
+  width: 150px;
+  text-align: right;
+}
+
+.form-row input {
+  width: 300px;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.medicine-entry {
+  margin-bottom: 18px;
+}
+
+.medicine-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.medicine-header label {
+  font-weight: bold;
+  text-align: center;
+}
+
+.remove-link {
+  color: red;
+  font-weight: bold;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.remove-link:hover {
+  text-decoration: underline;
+}
+
+.remove-link.inactive {
+  color: #f5c6cb;
+  font-weight: normal;
+  cursor: default;
+  text-decoration: none;
+}
+
+.medicine-row {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  justify-content: center;
+}
+
+.medicine-row select,
+.medicine-row input {
+  width: 40%;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.price-display {
+  font-weight: bold;
+  min-width: 80px;
+  text-align: left;
+  color: #007bff;
+  transition: color 0.3s ease;
+}
+
+.stock-warning {
+  font-size: 14px;
+  height: 18px;
+  text-align: center;
+  color: red;
+  margin-top: 5px;
+  overflow: hidden;
+}
+
+.total-display {
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+  margin-top: 30px;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.button-group {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.button-group button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.button-group button:hover {
+  background-color: #0056b3;
+}
+
+.no-medicine-warning {
+  background-color: #fff3cd;
+  color: #856404;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.go-add-btn {
+  display: inline-block;
+  margin-top: 15px;
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.go-add-btn:hover {
+  background-color: #0056b3;
+}

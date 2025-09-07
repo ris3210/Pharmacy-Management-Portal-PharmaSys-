@@ -1,0 +1,81 @@
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #f4f4f4;
+}
+
+.dashboard-wrapper {
+  display: flex;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 220px;
+  background-color: #007bff;
+  color: white;
+  padding: 20px;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar h2 {
+  margin-top: 0;
+  font-size: 24px;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.brand-link {
+  color: white;
+  text-decoration: none;
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.menu a {
+  color: white;
+  text-decoration: none;
+  padding: 10px;
+  border-radius: 6px;
+  background-color: rgba(255, 255, 255, 0.2);
+  transition: background-color 0.3s ease;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.menu a.logout {
+  background-color: #ff0000;
+}
+
+.menu a:hover {
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
+.menu a.logout:hover {
+  background-color: #dc143d;
+}
+
+.main-content {
+  flex: 1;
+  padding: 60px;
+  text-align: center;
+  background: url('/images/image1.jpg') no-repeat center center;
+  background-size: cover;
+}
+
+.welcome-message {
+  font-size: 28px;
+  font-weight: bold;
+  color: #000;
+}
+
+.datetime {
+  font-size: 20px;
+  color: #000;
+  margin-top: 10px;
+}

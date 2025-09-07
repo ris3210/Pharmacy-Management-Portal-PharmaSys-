@@ -1,0 +1,267 @@
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #f4f4f4;
+}
+
+.dashboard-wrapper {
+  display: flex;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 220px;
+  background-color: #007bff;
+  color: white;
+  padding: 20px;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar h2 {
+  margin-top: 0;
+  font-size: 24px;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.brand-link {
+  color: white;
+  text-decoration: none;
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.menu a {
+  color: white;
+  text-decoration: none;
+  padding: 10px;
+  border-radius: 6px;
+  background-color: rgba(255, 255, 255, 0.2);
+  transition: background-color 0.3s ease;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.menu a.logout {
+  background-color: #ff0000;
+}
+
+.menu a:hover {
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
+.menu a.logout:hover {
+  background-color: #dc143d;
+}
+
+.main-content {
+  flex: 1;
+  padding: 60px;
+  text-align: center;
+  background: url('/images/image3.jpg') no-repeat center center;
+  background-size: cover;
+}
+
+.main-content h1 {
+  color: #fff;
+}
+
+.medicine-heading {
+  font-size: 24px;
+  color: #fff;
+  text-align: left;
+  margin-bottom: 20px;
+}
+
+.add-medicine-button {
+  padding: 12px 24px;
+  font-size: 16px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  text-align: left;
+  margin-bottom: 40px;
+}
+
+.add-medicine-button:hover {
+  background-color: #218838;
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+  position: relative;
+  background-color: #fff;
+  margin: 10% auto;
+  padding: 30px;
+  border-radius: 8px;
+  width: 400px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  text-align: left;
+}
+
+.modal-content label {
+  display: block;
+  margin-top: 10px;
+  font-weight: 600;
+  color: #333;
+}
+
+.modal-content h2 {
+  margin-top: 0;
+}
+
+.modal-content input {
+  width: 95%;
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.modal-content button {
+  display: block;
+  margin: 20px auto 0;
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.modal-content button:hover {
+  background-color: #0056b3;
+}
+
+.close-button {
+  float: right;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.medicine-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.medicine-card {
+  background-color: #ffffffcc;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease;
+  text-align: left;
+}
+
+.medicine-card:hover {
+  transform: translateY(-5px);
+}
+
+.medicine-card h3 {
+  margin-top: 0;
+  color: #007bff;
+}
+
+.medicine-card p {
+  margin: 8px 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.medicine-card p strong {
+  color: #333;
+  font-weight: 600;
+}
+
+.no-medicines {
+  font-size: 18px;
+  color: #fff;
+  margin: 20px 0;
+  text-align: center;
+  font-weight: 500;
+}
+
+.hidden {
+  display: none;
+}
+
+.form-message {
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #dc3545;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  height: 20px;
+  text-align: center;
+}
+
+.form-message.visible {
+  opacity: 1;
+}
+
+.form-message.success {
+  color: #28a745;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.edit-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+.edit-btn:hover {
+  background-color: #0056b3;
+}
+
+.close-button,
+.close-edit-button {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+  cursor: pointer;
+  z-index: 10;
+  transition: color 0.3s ease;
+}
+
+.close-button:hover,
+.close-edit-button:hover {
+  color: #007bff;
+}
