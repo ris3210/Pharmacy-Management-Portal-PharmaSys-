@@ -1,4 +1,5 @@
 🚀 **Project Highlights**
+
 **Full-Stack Architecture**: Built with Node.js, Express, MongoDB, and EJS to deliver a robust backend and dynamic frontend for pharmacy operations.
 
 **Modular Workflow Management**: Handles billing, inventory, orders, refunds, and transactions with intelligent status transitions and edge-case precision.
